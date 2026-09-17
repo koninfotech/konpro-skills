@@ -1,0 +1,32 @@
+{
+  "name": "konpro",
+  "owner": {
+    "name": "KonInfotech",
+    "email": "support@konpro.ai",
+    "url": "https://konpro.ai"
+  },
+  "metadata": {
+    "description": "Official Konpro Agent Skills.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "konpro-skills",
+      "source": "./",
+      "description": "Integrate the Konpro AI voice-avatar widget end to end — client embed plus the server-side session endpoint.",
+      "version": "1.0.0",
+      "author": {
+        "name": "KonInfotech",
+        "email": "support@konpro.ai"
+      },
+      "homepage": "https://docs.konpro.ai/api/widget-integration",
+      "license": "MIT",
+      "keywords": [
+        "konpro",
+        "avatar",
+        "voice",
+        "widget"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "name": "konpro-skills",
+  "version": "1.0.0",
+  "description": "Agent Skills for integrating the Konpro AI voice-avatar widget: client embed, server-side session endpoint, CSP and microphone permissions.",
+  "author": {
+    "name": "KonInfotech",
+    "email": "support@konpro.ai",
+    "url": "https://konpro.ai"
+  },
+  "homepage": "https://docs.konpro.ai/api/widget-integration",
+  "repository": "https://github.com/konpro/skills",
+  "license": "MIT",
+  "keywords": [
+    "konpro",
+    "avatar",
+    "voice",
+    "widget",
+    "webrtc",
+    "ai-assistant"
+  ]
+}
