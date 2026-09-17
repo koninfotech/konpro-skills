@@ -26,6 +26,30 @@ Option reference lives in the package READMEs. Do not restate them here:
 - https://www.npmjs.com/package/@konpro/js-sdk — server SDK
 - https://docs.konpro.ai/api/widget-integration
 
+## Before generating
+
+Infer silently: React vs vanilla (read `package.json`), framework and route
+conventions (read the repo). Do not ask what the repo already answers.
+
+Ask once, batched, then build — never one question at a time:
+
+- Which agentic avatar, if the account has more than one. Cannot be guessed;
+  the session binds to it. `konpro-avatar-setup` lists them.
+- Bubble launcher or inline widget, when the request does not settle it.
+  Default to bubble for site-wide or support use, inline for a named page or a
+  sized area.
+
+Do not ask about CSP, the worklet, theme, or caption toggles. Apply the defaults
+below, then state what you chose.
+
+Raise these only if the context does:
+
+- `pushToTalk: true` — kiosks, lobbies, noisy environments.
+- `audioOnly` — bandwidth limits or an explicit voice-only request.
+
+Write the route against `process.env`. Never hard-code a placeholder avatar id
+or key — that fails at runtime, not at build.
+
 ## Build order
 
 1. Server route first (`references/session-endpoint.md`).
