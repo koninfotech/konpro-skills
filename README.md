@@ -8,7 +8,7 @@ rediscovering the failure modes that make the two halves disagree.
 ## Install
 
 ```bash
-npx skills add konpro/skills
+npx skills add koninfotech/konpro-skills
 ```
 
 Installs into whichever agents you have — Claude Code, Cursor, Codex, Copilot,
@@ -22,7 +22,7 @@ Then just ask:
 <summary>Claude Code plugin marketplace</summary>
 
 ```
-/plugin marketplace add konpro/skills
+/plugin marketplace add koninfotech/konpro-skills
 /plugin install konpro-skills@konpro
 ```
 
@@ -82,8 +82,8 @@ the token.
 ## Local development
 
 ```bash
-git clone https://github.com/konpro/skills
-cd skills
+git clone https://github.com/koninfotech/konpro-skills
+cd konpro-skills
 npx skills add ./
 ```
 
