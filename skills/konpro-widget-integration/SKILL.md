@@ -95,8 +95,8 @@ Never hand-pick fields. The widget reads each of these, camelCase or snake_case:
 `{ session_token }` looks complete. It is not. The widget sources
 `agenticAvatarId` for the WebSocket init message from `sessionData.avatar.id`.
 
-Without it, widget 2.0.5 falls back to the `agenticAvatarId` claim in the JWT and
-logs `Session response had no avatar.id — falling back to the token's
+Without it, the widget (2.0.5+) falls back to the `agenticAvatarId` claim in the
+JWT and logs `Session response had no avatar.id — falling back to the token's
 agenticAvatarId claim`. Treat that warning as a bug to fix, not as working. When
 the fallback cannot apply, the WebSocket opens and the server closes it
 immediately with `Missing required fields: token, agenticAvatarId, userId`.
@@ -147,25 +147,35 @@ script-src   'self' https://cdn.konpro.ai;
 style-src    'self' 'unsafe-inline';
 connect-src  'self' wss://api.konpro.ai https://api.konpro.ai https://inference.konpro.ai;
 img-src      'self' data: https:;
-media-src    'self' blob:;
+media-src    'self' blob: https://cdn.konpro.ai;
 ```
+
+`media-src` needs the CDN for `kon-ringtone.mp3`, the outgoing-call ringtone. It
+is an `<audio>` element, so `media-src` governs it, not `connect-src`. Drop the
+CDN host if you bundle from npm, or set `ringtone` to your own URL or `false`.
 
 If the host CSP allows neither `data:` nor `blob:` script sources, serve
 `@konpro/widget/dist/mic-capture.worklet.js` yourself and pass its URL as
 `workletUrl`.
 
-## Rule 5 — the worklet ships beside the bundle
+## Rule 5 — sibling assets ship beside the bundle
 
-Bundler users (Vite, webpack 5, Rollup) get this automatically from the ESM
+Two files sit next to the bundle and are resolved from its own script `src`:
+`mic-capture.worklet.js` and `kon-ringtone.mp3`.
+
+Bundler users (Vite, webpack 5, Rollup) get both automatically from the ESM
 build. Nothing to do.
 
-Script-tag/CDN integrations self-hosting the bundle must deploy
-`mic-capture.worklet.js` as a sibling of it — the widget derives the worklet URL
-from its own script `src`. If it is missing, 2.0.5 degrades to an inlined `blob:`
-worklet, so the failure is a console warning plus up to a 6-second stall on first
-microphone use rather than a hard error — unless the CSP also blocks `blob:`, in
-which case mic capture fails outright. Deploy both files. Nothing surfaces at
-deploy time; only on first microphone use.
+Script-tag/CDN integrations self-hosting the bundle must deploy both alongside
+it. Neither fails at deploy time:
+
+- **Worklet missing** — degrades to an inlined `blob:` worklet, so a console
+  warning plus up to a 6-second stall on first microphone use, not a hard error.
+  Unless the CSP also blocks `blob:`, in which case mic capture fails outright.
+- **Ringtone missing** — logs `🔔 Ringtone could not play (non-fatal)` and the
+  call proceeds in silence. No fallback, and none needed.
+
+Deploy all three files together. Nothing surfaces until first use.
 
 ## Rule 6 — pick the right client package
 

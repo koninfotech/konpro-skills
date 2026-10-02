@@ -16,22 +16,29 @@ Content-Security-Policy:
   style-src    'self' 'unsafe-inline';
   connect-src  'self' wss://api.konpro.ai https://api.konpro.ai https://inference.konpro.ai;
   img-src      'self' data: https:;
-  media-src    'self' blob:;
+  media-src    'self' blob: https://cdn.konpro.ai;
 ```
 
 Real hosts, not placeholders:
 
 | host | used for |
 |---|---|
-| `https://cdn.konpro.ai` | CDN bundle + worklet (script-tag integrations) |
+| `https://cdn.konpro.ai` | CDN bundle, worklet and ringtone (script-tag integrations) |
 | `https://api.konpro.ai` / `wss://api.konpro.ai` | session API and the realtime WebSocket |
 | `https://inference.konpro.ai` | model inference |
 
 `style-src 'unsafe-inline'` is required — the widget injects its stylesheet.
 `media-src blob:` is required for avatar audio/video playback.
 
+`media-src https://cdn.konpro.ai` covers the outgoing-call ringtone
+(`kon-ringtone.mp3`), played while the connect pipeline runs. It is an `<audio>`
+element, so it falls under `media-src` — not `connect-src`. Like the worklet, it
+is a sibling of the bundle, so CDN integrations load it from the CDN and bundled
+installs get it from `'self'`.
+
 Drop `https://cdn.konpro.ai` from `script-src` if you install from npm and bundle
-the widget: it is then served from `'self'`.
+the widget: it is then served from `'self'`. The same applies to `media-src`,
+unless you point `ringtone` at a URL of your own.
 
 ## Feature-gated additions
 
@@ -62,7 +69,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self' wss://api.konpro.ai https://api.konpro.ai https://inference.konpro.ai",
   "img-src 'self' data: https:",
-  "media-src 'self' blob:",
+  "media-src 'self' blob: https://cdn.konpro.ai",
 ].join("; ");
 
 module.exports = {
@@ -106,7 +113,7 @@ app.use(
           "https://inference.konpro.ai",
         ],
         imgSrc: ["'self'", "data:", "https:"],
-        mediaSrc: ["'self'", "blob:"],
+        mediaSrc: ["'self'", "blob:", "https://cdn.konpro.ai"],
       },
     },
   }),
@@ -167,14 +174,38 @@ is also blocked, both paths are dead and microphone capture fails:
 
 So the directive you need depends on how you ship:
 
-| you ship | `script-src` must allow |
-|---|---|
-| CDN script tag | `https://cdn.konpro.ai` |
-| Vite | `data:` (or `blob:` for the fallback) |
-| webpack / Rollup | `'self'` |
-| self-hosted bundle | `'self'` |
+| you ship | `script-src` must allow | `media-src` must allow |
+|---|---|---|
+| CDN script tag | `https://cdn.konpro.ai` | `https://cdn.konpro.ai` |
+| Vite | `data:` (or `blob:` for the fallback) | `'self'` |
+| webpack / Rollup | `'self'` | `'self'` |
+| self-hosted bundle | `'self'` | `'self'` |
 
-Adding `blob:` to `script-src` keeps the fallback available in every case.
+Adding `blob:` to `script-src` keeps the worklet fallback available in every case.
+
+## The ringtone
+
+`kon-ringtone.mp3` plays while the connect pipeline runs. It resolves through the
+same sibling-asset path as the worklet — bundler-rewritten URL for the ESM build,
+`document.currentScript` sibling for the CDN build, then
+`https://cdn.konpro.ai/widget/kon-ringtone.mp3` — which is why `media-src` tracks
+`script-src` in the table above. The mp3 is past Vite's inline limit, so bundlers
+emit a real asset served from `'self'` rather than a `data:` URI.
+
+Unlike the worklet there is no fallback, and none is needed: a ringtone blocked
+by CSP, refused by autoplay policy or 404ing because the asset was not deployed
+is cosmetic. It logs and the call proceeds.
+
+```
+🔔 Ringtone could not play (non-fatal): …
+```
+
+To avoid the directive entirely, point it at your own asset or switch it off:
+
+```js
+init({ sessionEndpoint: "/api/widget-session", ringtone: "/audio/our-ring.mp3" });
+init({ sessionEndpoint: "/api/widget-session", ringtone: false });
+```
 
 ### Strict CSP — no `data:`, no `blob:`
 
@@ -183,6 +214,7 @@ nothing depends on `data:` or `blob:`.
 
 ```bash
 cp node_modules/@konpro/widget/dist/mic-capture.worklet.js public/konpro/
+cp node_modules/@konpro/widget/dist/kon-ringtone.mp3 public/konpro/
 ```
 
 ```js
@@ -190,13 +222,14 @@ init({
   sessionEndpoint: "/api/widget-session",
   containerId: "assistant",
   workletUrl: "/konpro/mic-capture.worklet.js",
+  ringtone: "/konpro/kon-ringtone.mp3",
 });
 ```
 
-`script-src 'self'` then covers it. Re-copy the file on every upgrade of
-`@konpro/widget` — a stale worklet and a new bundle is a version mismatch the
-build will not catch. A `postinstall` script or a build step is the reliable
-place for it.
+`script-src 'self'` and `media-src 'self'` then cover both. Re-copy on every
+upgrade of `@konpro/widget` — a stale worklet and a new bundle is a version
+mismatch the build will not catch. A `postinstall` script or a build step is the
+reliable place for it.
 
 ## HTTPS
 
@@ -212,3 +245,6 @@ testing on a phone.
 3. Network tab, filter `worklet` — confirm it loads, and from where.
 4. Console line `🎤 worklet loaded via url` (good) or `via blob` (the fallback
    ran — your intended URL failed).
+5. Start a call and listen for the ringtone. Silence plus a `media-src` violation
+   or `🔔 Ringtone could not play` means `kon-ringtone.mp3` is blocked or missing.
+   Cosmetic, so it is easy to ship broken — check it deliberately.

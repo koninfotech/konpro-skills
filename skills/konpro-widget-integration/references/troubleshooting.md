@@ -15,6 +15,8 @@ Keyed by the literal string that appears in the console or network tab.
 | `Refused to load the script` / `script-src-elem` violation | worklet blocked by CSP | allow it, or self-host + `workletUrl` |
 | `🎤 worklet URL load failed` then `via blob` | worklet not deployed beside the bundle | ship both files together |
 | `🎤 worklet blob fallback also failed` | CSP blocks the origin *and* `blob:` | self-host + `workletUrl` |
+| `🔔 Ringtone could not play (non-fatal)` | ringtone blocked by `media-src`, missing, or autoplay-refused | add `media-src https://cdn.konpro.ai`, or set `ringtone` |
+| no ringtone while connecting, `media-src` violation | CDN missing from `media-src` | add `https://cdn.konpro.ai` to `media-src` |
 | mic permission never prompts | missing `Permissions-Policy` / iframe `allow` | add both |
 | connection error after long idle | expired token | return `expiresAt` / `expiresIn` |
 | avatar interrupts itself | audio-only echo | expected — use push-to-talk |
@@ -53,7 +55,7 @@ Rule 2 in SKILL.md.
 
 ## `Session response had no avatar.id — falling back to the token's agenticAvatarId claim`
 
-Console warning, widget 2.0.5 and later. Same root cause as above; the widget
+Console warning, widget 2.0.5+. Same root cause as above; the widget
 recovered by decoding the JWT claim.
 
 It works, so it is easy to ignore. Do not. It is the same broken endpoint, one
@@ -138,6 +140,39 @@ Both paths dead: CSP allows neither the worklet's origin nor `blob:` in
 `script-src`. Microphone capture cannot start.
 
 Self-host the worklet and set `workletUrl` so no fallback is needed.
+
+## `🔔 Ringtone could not play (non-fatal)` / no ringtone while connecting
+
+`kon-ringtone.mp3` plays during the connect pipeline. It is an `<audio>` element,
+so `media-src` governs it — a strict CSP reports a `media-src` violation, not an
+audio error.
+
+The baseline needs the CDN host:
+
+```
+media-src 'self' blob: https://cdn.konpro.ai;
+```
+
+Three causes, in order of likelihood:
+
+1. **CSP.** `media-src` omits `https://cdn.konpro.ai` (CDN build) or `'self'`
+   (bundled build).
+2. **Not deployed.** Self-hosting the bundle without copying
+   `kon-ringtone.mp3` beside it — the widget resolves it from its own script
+   `src`, so it 404s.
+3. **Autoplay policy.** The browser refused playback outside a user gesture.
+   The widget already unlocks the element inside the click that starts the call,
+   so this is rare.
+
+It is cosmetic either way — the call connects normally. That also means it ships
+broken easily, since nothing fails. Check it deliberately.
+
+To avoid the directive, host the asset yourself or turn it off:
+
+```js
+init({ sessionEndpoint: "/api/widget-session", ringtone: "/audio/our-ring.mp3" });
+init({ sessionEndpoint: "/api/widget-session", ringtone: false });
+```
 
 ## Microphone permission never prompts
 

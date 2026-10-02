@@ -52,25 +52,28 @@ same object. Both expose `init`, `version`, `KonAIWidget`, `KonAIBubble`.
 Load the script without `type="module"`. The IIFE build resolves its worklet via
 `document.currentScript`, which is `null` inside an ES module.
 
-## Self-hosting the bundle — ship the worklet with it
+## Self-hosting the bundle — ship the sibling assets with it
 
-If you serve the bundle from your own origin rather than the CDN, copy **both**
-files:
+If you serve the bundle from your own origin rather than the CDN, copy **all
+three** files:
 
 ```
 /assets/konpro/index.min.js
 /assets/konpro/mic-capture.worklet.js
+/assets/konpro/kon-ringtone.mp3
 ```
 
-The widget derives the worklet URL from its own script `src`, so the worklet
-must sit next to the bundle. Copy it from
-`node_modules/@konpro/widget/dist/mic-capture.worklet.js`, or via the export
-`@konpro/widget/worklet`.
+The widget derives both asset URLs from its own script `src`, so they must sit
+next to the bundle. Copy them from `node_modules/@konpro/widget/dist/`; the
+worklet is also exported as `@konpro/widget/worklet`.
 
-If it is missing the widget degrades to an inlined `blob:` worklet — a console
-warning and up to a 6-second stall on first microphone use, not a hard failure —
-unless your CSP also blocks `blob:`, in which case mic capture fails outright.
-Nothing goes wrong at deploy time. It surfaces only on first microphone use.
+Neither failure appears at deploy time:
+
+- **Worklet missing** — degrades to an inlined `blob:` worklet: a console warning
+  and up to a 6-second stall on first microphone use, not a hard failure. Unless
+  your CSP also blocks `blob:`, in which case mic capture fails outright.
+- **Ringtone missing** — the connecting phase is silent and the console logs
+  `🔔 Ringtone could not play (non-fatal)`. The call is unaffected.
 
 Under a strict CSP, skip the guessing and be explicit:
 
@@ -79,8 +82,12 @@ init({
   sessionEndpoint: "/api/widget-session",
   containerId: "assistant",
   workletUrl: "/assets/konpro/mic-capture.worklet.js",
+  ringtone: "/assets/konpro/kon-ringtone.mp3",
 });
 ```
+
+`ringtone: false` disables it, and a string points it anywhere you like — either
+removes the need for `media-src https://cdn.konpro.ai`.
 
 ## Bubble launcher
 
